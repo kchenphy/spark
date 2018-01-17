@@ -141,8 +141,8 @@ class DataFrameStatSuite extends QueryTest with SharedSQLContext {
 
   test("approximate quantile") {
     val n = 1000
-    val df = Seq.tabulate(n + 1)(i => (i, 2.0 * i)).toDF("singles", "doubles")
-
+    val df = Seq.tabulate(n + 1)(i => (i, 2.0 * i)).toDF("singles", "doubles").repartition(100)
+    println(sparkContext.getConf.get("spark.master"))
     val q1 = 0.5
     val q2 = 0.8
     val epsilons = List(0.1, 0.05, 0.001)
@@ -154,24 +154,24 @@ class DataFrameStatSuite extends QueryTest with SharedSQLContext {
       val Array(d1, d2) = df.stat.approxQuantile("doubles", Array(q1, q2), epsilon)
       val Array(s1, s2) = df.stat.approxQuantile("singles", Array(q1, q2), epsilon)
 
-      val error_single = 2 * 1000 * epsilon
-      val error_double = 2 * 2000 * epsilon
+      val error_single = 1000 * epsilon
+      val error_double = 2000 * epsilon
 
-      assert(math.abs(single1 - q1 * n) < error_single)
-      assert(math.abs(double2 - 2 * q2 * n) < error_double)
-      assert(math.abs(s1 - q1 * n) < error_single)
-      assert(math.abs(s2 - q2 * n) < error_single)
-      assert(math.abs(d1 - 2 * q1 * n) < error_double)
-      assert(math.abs(d2 - 2 * q2 * n) < error_double)
+      assert(math.abs(single1 - q1 * n) <= error_single)
+      assert(math.abs(double2 - 2 * q2 * n) <= error_double)
+      assert(math.abs(s1 - q1 * n) <= error_single)
+      assert(math.abs(s2 - q2 * n) <= error_single)
+      assert(math.abs(d1 - 2 * q1 * n) <= error_double)
+      assert(math.abs(d2 - 2 * q2 * n) <= error_double)
 
       // Multiple columns
       val Array(Array(ms1, ms2), Array(md1, md2)) =
         df.stat.approxQuantile(Array("singles", "doubles"), Array(q1, q2), epsilon)
 
-      assert(math.abs(ms1 - q1 * n) < error_single)
-      assert(math.abs(ms2 - q2 * n) < error_single)
-      assert(math.abs(md1 - 2 * q1 * n) < error_double)
-      assert(math.abs(md2 - 2 * q2 * n) < error_double)
+      assert(math.abs(ms1 - q1 * n) <= error_single)
+      assert(math.abs(ms2 - q2 * n) <= error_single)
+      assert(math.abs(md1 - 2 * q1 * n) <= error_double)
+      assert(math.abs(md2 - 2 * q2 * n) <= error_double)
     }
 
     // quantile should be in the range [0.0, 1.0]
